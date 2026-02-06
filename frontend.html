@@ -219,6 +219,7 @@
         
         <div class="result-section" id="resultSection">
             <h3 style="margin-bottom: 15px;">📊 Résumé</h3>
+            
             <div class="result-item">
                 <span class="result-label">Nombre de trades</span>
                 <span class="result-value" id="tradesCount">-</span>
@@ -228,8 +229,16 @@
                 <span class="result-value" id="totalVolume">-</span>
             </div>
             <div class="result-item">
+                <span class="result-label">PnL brut (gains - pertes)</span>
+                <span class="result-value" id="pnlGross">-</span>
+            </div>
+            <div class="result-item">
                 <span class="result-label">Fees totaux</span>
                 <span class="result-value" id="totalFees">-</span>
+            </div>
+            <div class="result-item" style="border-top: 2px solid #667eea; padding-top: 15px; margin-top: 10px;">
+                <span class="result-label" style="font-size: 18px; font-weight: 700;">💰 Plus-value nette</span>
+                <span class="result-value" id="pnlNet" style="font-size: 20px; font-weight: 700; color: #667eea;">-</span>
             </div>
             <div class="result-item">
                 <span class="result-label">Période</span>
@@ -336,7 +345,21 @@
             // Afficher les stats
             document.getElementById('tradesCount').textContent = summary.total_trades.toLocaleString();
             document.getElementById('totalVolume').textContent = '$' + summary.total_volume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            document.getElementById('totalFees').textContent = '$' + summary.total_fees.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            // PnL brut
+            const pnlGross = summary.pnl_gross || 0;
+            const pnlGrossEl = document.getElementById('pnlGross');
+            pnlGrossEl.textContent = '$' + pnlGross.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            pnlGrossEl.style.color = pnlGross >= 0 ? '#22c55e' : '#ef4444';
+            
+            // Fees
+            document.getElementById('totalFees').textContent = '-$' + summary.total_fees.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            // PnL net (le plus important !)
+            const pnlNet = summary.pnl_net || 0;
+            const pnlNetEl = document.getElementById('pnlNet');
+            pnlNetEl.textContent = '$' + pnlNet.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            pnlNetEl.style.color = pnlNet >= 0 ? '#22c55e' : '#ef4444';
             
             if (summary.period_start && summary.period_end) {
                 const start = new Date(summary.period_start).toLocaleDateString('fr-FR');

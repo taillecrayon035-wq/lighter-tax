@@ -137,9 +137,41 @@ def generate_lighter_report(token, account_index, report_id):
                             'taker_fee': trade_data.get('taker_fee', 0)
                         })
         
-        # Calcul rapide du volume et fees
+        # Calcul du volume et fees
         total_volume = sum(t['size'] * t['price'] for t in trades)
         total_fees = sum(t['size'] * t['price'] * (t['maker_fee'] + t['taker_fee']) / 10000 for t in trades)
+        
+        # ===== CALCUL PNL FIFO =====
+        # Séparer achats et ventes
+        buys = [t for t in trades if not t['is_sell']]
+        sells = [t for t in trades if t['is_sell']]
+        
+        # Trier par date (ordre chronologique)
+        buys.sort(key=lambda x: x['time'])
+        sells.sort(key=lambda x: x['time'])
+        
+        # Calculer le PnL avec FIFO
+        total_pnl = 0
+        buys_queue = buys.copy()
+        
+        for sell in sells:
+            remaining = sell['size']
+            
+            while remaining > 0 and len(buys_queue) > 0:
+                buy = buys_queue[0]
+                matched = min(remaining, buy['size'])
+                
+                # PnL = (prix de vente - prix d'achat) × quantité
+                total_pnl += (sell['price'] - buy['price']) * matched
+                
+                remaining -= matched
+                buys_queue[0]['size'] -= matched
+                
+                if buys_queue[0]['size'] <= 0.0001:
+                    buys_queue.pop(0)
+        
+        # PnL net = PnL brut - Fees
+        pnl_net = total_pnl - total_fees
         
         # Résultat final
         result = {
@@ -147,8 +179,12 @@ def generate_lighter_report(token, account_index, report_id):
                 'account_index': account_index,
                 'year': 2025,
                 'total_trades': len(trades),
-                'total_volume': total_volume,
-                'total_fees': total_fees,
+                'total_buys': len(buys),
+                'total_sells': len(sells),
+                'total_volume': round(total_volume, 2),
+                'total_fees': round(total_fees, 2),
+                'pnl_gross': round(total_pnl, 2),
+                'pnl_net': round(pnl_net, 2),
                 'period_start': all_logs_2025[-1]['time'] if all_logs_2025 else None,
                 'period_end': all_logs_2025[0]['time'] if all_logs_2025 else None
             },
