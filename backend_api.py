@@ -141,37 +141,54 @@ def generate_lighter_report(token, account_index, report_id):
         total_volume = sum(t['size'] * t['price'] for t in trades)
         total_fees = sum(t['size'] * t['price'] * (t['maker_fee'] + t['taker_fee']) / 10000 for t in trades)
         
-        # ===== CALCUL PNL FIFO =====
-        # Séparer achats et ventes
-        buys = [t for t in trades if not t['is_sell']]
-        sells = [t for t in trades if t['is_sell']]
+        # ===== CALCUL PNL FIFO PAR MARKET =====
+        # Grouper les trades par market
+        markets_trades = defaultdict(lambda: {'buys': [], 'sells': []})
         
-        # Trier par date (ordre chronologique)
-        buys.sort(key=lambda x: x['time'])
-        sells.sort(key=lambda x: x['time'])
-        
-        # Calculer le PnL avec FIFO
-        total_pnl = 0
-        buys_queue = buys.copy()
-        
-        for sell in sells:
-            remaining = sell['size']
+        for trade in trades:
+            market_id = str(trade['market_id'])
+            trade_copy = trade.copy()
             
-            while remaining > 0 and len(buys_queue) > 0:
-                buy = buys_queue[0]
-                matched = min(remaining, buy['size'])
+            if trade['is_sell']:
+                markets_trades[market_id]['sells'].append(trade_copy)
+            else:
+                markets_trades[market_id]['buys'].append(trade_copy)
+        
+        # Calculer le PnL pour chaque market séparément
+        total_pnl = 0
+        
+        for market_id, market_data in markets_trades.items():
+            buys = sorted(market_data['buys'], key=lambda x: x['time'])
+            sells = sorted(market_data['sells'], key=lambda x: x['time'])
+            
+            # FIFO pour ce market
+            buys_queue = buys.copy()
+            market_pnl = 0
+            
+            for sell in sells:
+                remaining = sell['size']
                 
-                # PnL = (prix de vente - prix d'achat) × quantité
-                total_pnl += (sell['price'] - buy['price']) * matched
-                
-                remaining -= matched
-                buys_queue[0]['size'] -= matched
-                
-                if buys_queue[0]['size'] <= 0.0001:
-                    buys_queue.pop(0)
+                while remaining > 0 and len(buys_queue) > 0:
+                    buy = buys_queue[0]
+                    matched = min(remaining, buy['size'])
+                    
+                    # PnL = (prix de vente - prix d'achat) × quantité
+                    market_pnl += (sell['price'] - buy['price']) * matched
+                    
+                    remaining -= matched
+                    buys_queue[0]['size'] -= matched
+                    
+                    if buys_queue[0]['size'] <= 0.0001:
+                        buys_queue.pop(0)
+            
+            total_pnl += market_pnl
         
         # PnL net = PnL brut - Fees
         pnl_net = total_pnl - total_fees
+        
+        # Compter achats et ventes
+        total_buys = len([t for t in trades if not t['is_sell']])
+        total_sells = len([t for t in trades if t['is_sell']])
         
         # Résultat final
         result = {
@@ -179,8 +196,8 @@ def generate_lighter_report(token, account_index, report_id):
                 'account_index': account_index,
                 'year': 2025,
                 'total_trades': len(trades),
-                'total_buys': len(buys),
-                'total_sells': len(sells),
+                'total_buys': total_buys,
+                'total_sells': total_sells,
                 'total_volume': round(total_volume, 2),
                 'total_fees': round(total_fees, 2),
                 'pnl_gross': round(total_pnl, 2),
