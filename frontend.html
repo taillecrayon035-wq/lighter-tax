@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lighter Tax - Rapport Fiscal Automatique</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            background: #f0f7ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .progress-section {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .result-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .result-value {
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .download-section {
+            display: none;
+            margin-top: 20px;
+        }
+        
+        .download-btn {
+            display: inline-block;
+            margin: 5px;
+            padding: 10px 20px;
+            background: white;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .download-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .error {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #fee;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            color: #c33;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧾 Lighter Tax</h1>
+        <p class="subtitle">Générez automatiquement votre rapport fiscal</p>
+        
+        <div class="info-box">
+            <strong>🔒 Sécurisé</strong><br>
+            Nous utilisons uniquement votre token read-only. Impossible d'accéder à vos fonds.
+        </div>
+        
+        <div class="form-group">
+            <label for="token">Token Read-Only Lighter</label>
+            <input 
+                type="text" 
+                id="token" 
+                placeholder="ro:524876:all:..." 
+                autocomplete="off"
+            />
+            <small style="color: #888; font-size: 12px; margin-top: 5px; display: block;">
+                Trouvez-le dans Settings → API Keys sur app.lighter.xyz
+            </small>
+        </div>
+        
+        <button class="btn" id="generateBtn" onclick="generateReport()">
+            Générer mon rapport fiscal 2025
+        </button>
+        
+        <div class="progress-section" id="progressSection">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">Récupération des données...</p>
+        </div>
+        
+        <div class="result-section" id="resultSection">
+            <h3 style="margin-bottom: 15px;">📊 Résumé</h3>
+            <div class="result-item">
+                <span class="result-label">Nombre de trades</span>
+                <span class="result-value" id="tradesCount">-</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Volume total</span>
+                <span class="result-value" id="totalVolume">-</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Fees totaux</span>
+                <span class="result-value" id="totalFees">-</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Période</span>
+                <span class="result-value" id="period">-</span>
+            </div>
+        </div>
+        
+        <div class="download-section" id="downloadSection">
+            <h3 style="margin-bottom: 15px;">📥 Télécharger</h3>
+            <a href="#" class="download-btn" id="downloadJson">📄 Rapport JSON</a>
+            <a href="#" class="download-btn" id="downloadCsv">📊 Trades CSV</a>
+        </div>
+        
+        <div class="error" id="error"></div>
+    </div>
+    
+    <script>
+        // Détecte automatiquement l'URL du backend
+        const API_URL = window.location.origin + '/api';
+        let currentReportId = null;
+        let statusInterval = null;
+        
+        async function generateReport() {
+            const token = document.getElementById('token').value.trim();
+            
+            if (!token) {
+                showError('Veuillez entrer votre token');
+                return;
+            }
+            
+            if (!token.startsWith('ro:')) {
+                showError('Token invalide (doit commencer par ro:)');
+                return;
+            }
+            
+            // Reset UI
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'none';
+            document.getElementById('downloadSection').style.display = 'none';
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('generateBtn').disabled = true;
+            
+            try {
+                // 1. Lancer la génération
+                const response = await fetch(`${API_URL}/generate-report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Erreur lors de la génération');
+                }
+                
+                currentReportId = data.report_id;
+                
+                // 2. Polling du status
+                statusInterval = setInterval(checkStatus, 1000);
+                
+            } catch (error) {
+                showError(error.message);
+                resetUI();
+            }
+        }
+        
+        async function checkStatus() {
+            if (!currentReportId) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/report-status/${currentReportId}`);
+                const data = await response.json();
+                
+                // Mettre à jour la progress bar
+                document.getElementById('progressFill').style.width = data.progress + '%';
+                
+                if (data.current_page) {
+                    document.getElementById('progressText').textContent = 
+                        `Récupération... Page ${data.current_page}`;
+                }
+                
+                if (data.status === 'completed') {
+                    clearInterval(statusInterval);
+                    showResults(data.summary);
+                } else if (data.status === 'error') {
+                    clearInterval(statusInterval);
+                    showError(data.error || 'Erreur inconnue');
+                    resetUI();
+                }
+                
+            } catch (error) {
+                clearInterval(statusInterval);
+                showError(error.message);
+                resetUI();
+            }
+        }
+        
+        function showResults(summary) {
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('resultSection').style.display = 'block';
+            document.getElementById('downloadSection').style.display = 'block';
+            
+            // Afficher les stats
+            document.getElementById('tradesCount').textContent = summary.total_trades.toLocaleString();
+            document.getElementById('totalVolume').textContent = '$' + summary.total_volume.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('totalFees').textContent = '$' + summary.total_fees.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            
+            if (summary.period_start && summary.period_end) {
+                const start = new Date(summary.period_start).toLocaleDateString('fr-FR');
+                const end = new Date(summary.period_end).toLocaleDateString('fr-FR');
+                document.getElementById('period').textContent = `${start} → ${end}`;
+            }
+            
+            // Configurer les liens de téléchargement
+            document.getElementById('downloadJson').href = `${API_URL}/download/${currentReportId}/json`;
+            document.getElementById('downloadCsv').href = `${API_URL}/download/${currentReportId}/csv`;
+            
+            document.getElementById('generateBtn').disabled = false;
+        }
+        
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = '❌ ' + message;
+            errorEl.style.display = 'block';
+        }
+        
+        function resetUI() {
+            document.getElementById('progressSection').style.display = 'none';
+            document.getElementById('generateBtn').disabled = false;
+        }
+    </script>
+</body>
+</html>
